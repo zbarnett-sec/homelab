@@ -9,6 +9,7 @@ The core of the network is powered by OPNsense running on a Protectli Vault, whi
 ### Repository Structure
 
 ```
+homelab/
 ├── README.md
 ├── diagrams/
 │   └── topology.md
