@@ -18,5 +18,5 @@ The core of the network is powered by OPNsense running on a Protectli Vault, whi
     ├── vlan10-mgmt.md
     ├── vlan20-labs.md
     ├── vlan30-ids.md
-    └──  vlan40-wifi.md
+    └── vlan40-wifi.md
 ```
