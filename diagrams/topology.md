@@ -26,7 +26,7 @@ VLAN 10  | MGMT         | 192.168.10.0/24  | Main PC       | Infrastructure mana
 
 VLAN 20  | Labs         | 192.168.20.0/24  | 2x Pi 3B+     | Security testing labs
 
-VLAN 30  | IDS          | 192.168.30.0/24  | Pi 4B         | Suricata, Python alert daemon (systemd), log2ram, webhook script
+VLAN 30  | IDS          | 192.168.30.0/24  | Pi 4B         | Suricata, Python alert daemon, log2ram, webhook script
 
 VLAN 40  | WiFi         | 192.168.40.0/24  | Router        | AP-only mode
 ```
