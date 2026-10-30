@@ -74,7 +74,7 @@ The initial setup and testing was done via WiFi, which is not practical for real
 
 Furthermore, while this prevents the majority of writing to the disk, it is still advised to keep an eye on your disk writes and storage space. This only solves 99% of the disk writes. I may work on fixing this at a later date.
 
-### 8. Static IP Configuration
+5. Static IP Configuration
 
 If you're using an Ubuntu server on the Raspberry Pi 4B and doing a dual-NIC setup, you will need to configure the network interface a particular way to avoid the interfaces clashing.
 
