@@ -17,16 +17,16 @@ Traffic isolation is enforced at Layer 2 using explicit tagged and untagged memb
 ### Port Assignment
 
 ```
-| Port | Mode   | VLAN(s)         | PVID | Connected Device                        |
-|------|--------|-----------------|------|-----------------------------------------|
-| 1    | Trunk  | 10, 20, 30, 40  | 1*   | OPNsense (Protectli Vault)              |
-| 2    | Access | 10 (untagged)   | 10   | Main PC                                 |
-| 3    | Access | 20 (untagged)   | 20   | Pi 3B+ (Lab 1)                          |
-| 4    | Access | 20 (untagged)   | 20   | WiFi router (AP-only)                   |
-| 5    | Access | 20 (untagged)   | 30   | Pi 3B+ (Lab 2)                          |
-| 6    | Access | 20 (untagged)   | 30   | Low-resource pen testing laptop         |
-| 7    | Disabled | 40 (untagged) | 40   | Pi 4B, management NIC (alerts/SSH)      |
-| 8    | Mirror destination | n/a | -    | Pi 4B, capture NIC (no IP assigned)     |
+| Port | Mode     | VLAN(s)         | PVID | Connected Device                        |
+|------|----------|-----------------|------|-----------------------------------------|
+| 1    | Trunk    | 10, 20, 30, 40  | 1*   | OPNsense (Protectli Vault)              |
+| 2    | Access   | 10 (untagged)   | 10   | Main PC                                 |
+| 3    | Access   | 20 (untagged)   | 20   | Pi 3B+ (Lab 1)                          |
+| 4    | Access   | 20 (untagged)   | 20   | WiFi router (AP-only)                   |
+| 5    | Access   | 20 (untagged)   | 30   | Pi 3B+ (Lab 2)                          |
+| 6    | Access   | 20 (untagged)   | 30   | Low-resource pen testing laptop         |
+| 7    | Disabled | 40 (untagged)   | 40   | Pi 4B, management NIC (alerts/SSH)      |
+| 8    | Mirror   | n/a             | -    | Pi 4B, capture NIC (no IP assigned)     |
 ```
 
 \* Set the trunk's native VLAN to an unused ID (not VLAN 1) if the switch allows it.
