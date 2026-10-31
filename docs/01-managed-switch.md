@@ -22,10 +22,10 @@ Traffic isolation is enforced at Layer 2 using explicit tagged and untagged memb
 | 1    | Trunk    | 10, 20, 30, 40  | 1*   | OPNsense (Protectli Vault)              |
 | 2    | Access   | 10 (untagged)   | 10   | Main PC                                 |
 | 3    | Access   | 20 (untagged)   | 20   | Pi 3B+ (Lab 1)                          |
-| 4    | Access   | 20 (untagged)   | 20   | WiFi router (AP-only)                   |
-| 5    | Access   | 20 (untagged)   | 30   | Pi 3B+ (Lab 2)                          |
-| 6    | Access   | 20 (untagged)   | 30   | Low-resource pen testing laptop         |
-| 7    | Disabled | 40 (untagged)   | 40   | Pi 4B, management NIC (alerts/SSH)      |
+| 4    | Access   | 40 (untagged)   | 40   | WiFi router (AP-only)                   |
+| 5    | Access   | 20 (untagged)   | 20   | Pi 3B+ (Lab 2)                          |
+| 6    | Access   | 20 (untagged)   | 20   | Low-resource pen testing laptop         |
+| 7    | Disabled | 30 (untagged)   | 30   | Pi 4B, management NIC (alerts/SSH)      |
 | 8    | Mirror   | n/a             | -    | Pi 4B, capture NIC (no IP assigned)     |
 ```
 
