@@ -33,9 +33,9 @@ Segmentation follows a default-deny model. Traffic is dropped unless an explicit
 ### Floating Rules
 
 ```
-| # | Action        | Interfaces       | Direction | Source  | Destination | Purpose                                         |
-|---|---------------|------------------|-----------|---------|-------------|-------------------------------------------------|
-| 1 | Block (quick) | VLAN 20, 30, 40  | In        | Any     | MGMT net    | Prevents lateral movement/MGMT Access 
+| # | Action        | Interfaces       | Direction | Source  | Destination | Purpose                                |
+|---|---------------|------------------|-----------|---------|-------------|----------------------------------------|
+| 1 | Block (quick) | VLAN 20, 30, 40  | In        | Any     | MGMT net    | Prevents lateral movement/MGMT Access  |
 ```
 ### Interface Rules
 
