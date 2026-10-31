@@ -1,27 +1,62 @@
-# Phase 1: OPNSense on the Protectli Vault
+# Phase 1: OPNsense on the Protectli Vault
 
-To eliminate any chance of network lockout, the initial configuration was performed entirely offline using a monitor and keyboard plugged directly into the Protectli Vault. This allowed the core networking interfaces to be rebuilt via the OPNSense Console Menu before initializing the web-based graphical interface.
+Initial configuration was performed offline, with a monitor and keyboard connected directly to the Protectli Vault, to minimize lockout risk. The core interfaces were built from the OPNsense console menu before the web GUI was used.
 
-## 1. First Boot & Interface Assignment
+## 1. First Boot and Interface Assignment
 
-Upon booting the hardware, the system loaded the interactive OPNSense Console Menu
+On first boot, the system loaded the interactive OPNsense console menu.
 
-* **Physical Recognition:** The console accurately identified the physical hardware interfaces, noting `igc0` as the designated WAN port and `igc1` as the physical LAN port layer.
-* **Interface Assignment and Initial Setup:** `igc1` was provisioned with a static IPv4 address within the `VLAN 10` scope (e.g., `192.168.10.1/24`) to establish the dedicated Management (MGMT) gateway. The integrated DHCP server was explicitly disabled to enforce strict static IP assignment across administrative endpoints. Default factory credentials were immediately rotated to comply with access control hardening standards.
-* **Administrative Access:** The administrative workstation was configured with a corresponding static IP within the `192.168.10.0/24` subnet, granting secure local access to the HTTPS WebGUI.
+* **Interface Assignment:** `igc0` was assigned as the WAN port and `igc1` as the internal interface, which later serves as the trunk to the managed switch.
+* **Bootstrap Management Address:** `igc1` was given the static address `192.168.10.1/24` to establish the MGMT gateway. The DHCP server was left disabled on this interface so that all administrative endpoints use static addressing.
+* **Credential Hardening:** The default `root` password was replaced with a unique, high-entropy passphrase. [Optional: a dedicated admin account was created and direct root login disabled.]
+* **Administrative Access:** The Main PC was given a static IP in the MGMT subnet (e.g., `192.168.10.10/24`), providing access to the HTTPS WebGUI at `https://192.168.10.1`.
 
-## 2. VLAN Segmentation & Layer 2/3 Assignment
+## 2. VLAN Segmentation and Layer 3 Assignment
 
-Logical network segmentation was constructed natively via interface > devices and interface > assignments through the HTTPS WebGUI after initial configuration.
+With the GUI available, VLANs were created under **Interfaces ▸ Devices ▸ VLAN**, then assigned and enabled under **Interfaces ▸ Assignments**. Each VLAN device uses `igc1` as its parent and has a static IPv4 gateway address. 
 
-## 3. Firewall Policy & Inter-VLAN Routing Constraints
+```
+| VLAN | Name   | Gateway IP     | DHCP                              |
+|------|--------|----------------|-----------------------------------|
+| 10   | MGMT   | 192.168.10.1   | Disabled (static only)            |
+| 20   | Labs   | 192.168.20.1   | Disabled (static only)            |
+| 30   | IDS    | 192.168.30.1   | Disabled (static only)            |
+| 40   | WiFi   | 192.168.40.1   | Enabled (router is AP-only)       |
+```
 
-To enforce a zero-trust architecture, strict packet filtering rules were implemented at the firewall layer:
+OPNsense is the sole Layer 3 boundary for all VLANs. Every inter-VLAN flow is routed and filtered by the firewall.
 
-* **Floating Rules (Global Block):** High-priority Floating Rules were established to drop all inter-VLAN traffic targeting the VLAN 10 (MGMT) interface, preventing lateral privilege escalation from lower-privilege zones. An explicit default-deny rule was applied to VLAN 40 (WLAN), isolating wireless clients from all other local RFC 1918 subnets.
+## 3. Firewall Policy and Inter-VLAN Routing
 
-* **Interface-Specific Rules (Targeted Administration):** Explicit pass rules were defined on the VLAN 10 interface to permit out-of-band SSH and management traffic strictly to designated endpoints within VLAN 20 (Labs) and VLAN 30 (IDS).
+Segmentation follows a default-deny model. Traffic is dropped unless an explicit rule allows it, and a small set of floating rules enforces global protections.
 
-### Author's Note:
+### Floating Rules
 
-Final deployment required additional configurations for NAT and DNS-over-TLS once connected to the WAN.
+```
+| # | Action        | Interfaces       | Direction | Source  | Destination | Purpose                                         |
+|---|---------------|------------------|-----------|---------|-------------|-------------------------------------------------|
+| 1 | Block (quick) | VLAN 20, 30, 40  | In        | Any     | MGMT net    | Prevents lateral movement/MGMT Access 
+```
+### Interface Rules
+
+```
+| Interface    | Order | Action | Destination                              | Purpose                                                                    |
+|--------------|-------|--------|------------------------------------------|----------------------------------------------------------------------------|
+| VLAN 10 MGMT | 1     | Pass   | Designated hosts in Labs and IDS, TCP/22 | Administrative SSH to specific endpoints only                              |
+| VLAN 10 MGMT | 2     | Pass   | Internet                                 | Updates and package access                                                 |
+| VLAN 40 WiFi | 1     | Pass   | This Firewall, DNS (TCP/UDP 53)          | Lets clients resolve names via the gateway                                 |
+| VLAN 40 WiFi | 2     | Block  | RFC 1918 alias                           | Isolates wireless clients from all local subnets                           |
+| VLAN 40 WiFi | 3     | Pass   | Any                                      | Internet-only access                                                       |
+| VLAN 20 Labs | 4     | Pass   | Internet                                 | Updates and package access                                                 |
+| VLAN 30 IDS  | 5     | Pass   | Internet                                 | Updates, package access, Discord webhook alerts                            |
+```
+
+The DNS pass rule on VLAN 40 must sit above the RFC 1918 block, because the gateway's own address is a private address and would otherwise be blocked too.
+
+## 4. Post-WAN Configuration
+
+Once the WAN link was connected, the following was completed:
+
+* **WAN Addressing:** `igc0` was configured for [DHCP / PPPoE / static] from the ONT.
+* **Outbound NAT:** [Automatic] outbound NAT translates all internal VLAN subnets to the WAN address.
+* **DNS-over-TLS:** Unbound DNS was configured to forward queries to [provider, e.g., Quad9 / Cloudflare] over TLS (**Services ▸ Unbound DNS ▸ DNS over TLS**), and clients receive their VLAN gateway as their DNS server. [Optional: outbound TCP/UDP 53 from client VLANs is blocked or redirected to prevent DNS bypass.]
