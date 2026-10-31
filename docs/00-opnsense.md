@@ -40,15 +40,15 @@ Segmentation follows a default-deny model. Traffic is dropped unless an explicit
 ### Interface Rules
 
 ```
-| Interface    | Order | Action | Destination                              | Purpose                                              |
-|--------------|-------|--------|------------------------------------------|------------------------------------------------------|
-| VLAN 10 MGMT | 1     | Pass   | Designated hosts   | Administrative SSH to specific endpoints only                              |
-| VLAN 10 MGMT | 2     | Pass   | Internet           | Updates and package access                                                 |
-| VLAN 40 WiFi | 1     | Pass   | This firewall, DNS | Lets clients resolve names via the gateway                                 |
-| VLAN 40 WiFi | 2     | Block  | RFC 1918 alias     | Isolates wireless clients from all local subnets                           |
-| VLAN 40 WiFi | 3     | Pass   | Any                | Internet-only access                                                       |
-| VLAN 20 Labs | 4     | Pass   | Internet           | Updates and package access                                                 |
-| VLAN 30 IDS  | 5     | Pass   | Internet           | Updates, package access, Discord webhook alerts                            |
+| Interface    | Order | Action | Destination                              | Purpose                       |
+|--------------|-------|--------|------------------------------------------|-------------------------------|
+| VLAN 10 MGMT | 1     | Pass   | Designated hosts   | Administrative SSH to specific endpoints only       |
+| VLAN 10 MGMT | 2     | Pass   | Internet           | Updates and package access                          |
+| VLAN 40 WiFi | 1     | Pass   | This firewall, DNS | Lets clients resolve names via the gateway          |
+| VLAN 40 WiFi | 2     | Block  | RFC 1918 alias     | Isolates wireless clients from all local subnets    |
+| VLAN 40 WiFi | 3     | Pass   | Any                | Internet-only access                                |
+| VLAN 20 Labs | 4     | Pass   | Internet           | Updates and package access                          |
+| VLAN 30 IDS  | 5     | Pass   | Internet           | Updates, package access, Discord webhook alerts     |
 ```
 
 The DNS pass rule on VLAN 40 must sit above the RFC 1918 block, because the gateway's own address is a private address and would otherwise be blocked too.
