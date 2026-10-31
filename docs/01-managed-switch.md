@@ -1,31 +1,47 @@
-# Phase 2: Managed switch and VLANs
+# Phase 2: Managed Switch and VLANs
 
-To support the 802.1Q logical segmentation defined at the firewall layer, an 8-port managed switch was provisioned to handle the physical distribution of VLAN tags, port mirroring, and native ingress filtering.
+An 8-port managed switch provides the physical layer for the 802.1Q segmentation defined at the OPNsense firewall. It handles VLAN tag distribution, ingress filtering, and hardware port mirroring for the IDS node.
 
-## 1. Device Hardening & Management Plane Initialization
+## 1. Device Hardening and Management Plane Setup
 
-Before integrating the switch into the active network topology, initial provisioning was conducted via a local loopback connection to isolate the device during administrative bootstrapping:
+Initial provisioning was done over a direct, isolated connection from the Main PC, with the switch kept off the production network until hardening was complete.
 
-Credential Hardening: Default factory administrative credentials were rotated to a cryptographically secure passphrase to prevent unauthorized local privilege escalation.
+* **Credential Hardening:** The factory default administrator credentials were replaced with a unique, high-entropy passphrase.
+* **Management IP Migration:** The switch's vendor-default management address was moved to a static IP in VLAN 10 (`192.168.10.2/24`), with the OPNsense MGMT interface as its default gateway.
+* **Access Restriction:** The WebGUI/CLI is reachable only from hosts in the MGMT zone. [Optional: HTTP and Telnet disabled; HTTPS/SSH only.]
 
-* **Management Interface Assignment:** The switch's default management IP was migrated from the vendor-default subnet to a static IPv4 assignment within VLAN 10 (e.g., 192.168.10.2/24). This locks down the administrative WebGUI/CLI, ensuring it is only accessible to authenticated hosts originating from the dedicated MGMT zone alongside the OPNsense management gateway.
+## 2. 802.1Q VLAN Provisioning and PVID Mapping
 
-## 2. 802.1Q VLAN Provisioning & PVID Mapping
+Traffic isolation is enforced at Layer 2 using explicit tagged and untagged membership rules, so each VLAN is its own broadcast domain.
 
-To enforce strict traffic isolation at Layer 2, the switch fabric was carved into discrete broadcast domains using explicit ingress and egress tagging rules.
+### Port Assignment
 
-### Ingress Filtering and Port Mode Logic:
+```
+| Port | Mode   | VLAN(s)         | PVID | Connected Device                        |
+|------|--------|-----------------|------|-----------------------------------------|
+| 1    | Trunk  | 10, 20, 30, 40  | 1*   | OPNsense (Protectli Vault)              |
+| 2    | Access | 10 (untagged)   | 10   | Main PC                                 |
+| 3    | Access | 20 (untagged)   | 20   | Pi 3B+ (Lab 1)                          |
+| 4    | Access | 20 (untagged)   | 20   | WiFi router (AP-only)                   |
+| 5    | Access | 20 (untagged)   | 30   | Pi 3B+ (Lab 2)                          |
+| 6    | Access | 20 (untagged)   | 30   | Low-resource pen testing laptop         |
+| 7    | Disabled | 40 (untagged) | 40   | Pi 4B, management NIC (alerts/SSH)      |
+| 8    | Mirror destination | n/a | -    | Pi 4B, capture NIC (no IP assigned)     |
+```
 
-* **Trunk Configuration (Ports 1 & 8):** Ports 1 and 8 were configured as explicit trunk ports, accepting frames with valid 802.1Q tags for all 4 operational VLANs (10, 20, 30, 40).
+\* Set the trunk's native VLAN to an unused ID (not VLAN 1) if the switch allows it.
 
-* **Access Configuration:** Host-facing ports were stripped of tagging requirements. To prevent VLAN hopping and traffic bleeding, the PVID (Port VLAN ID) on each access port was explicitly locked to match its assigned untagged VLAN ID. Any untagged ingress frame entering these ports is automatically encapsulated with the corresponding VLAN tag at the hardware level.
+### Port Mode Logic
 
-## 3. Passive Monitoring via Switched Port Analyzer (SPAN)
+* **Trunk (Port 1):** Carries tagged frames for VLANs 10, 20, 30, and 40 between the switch and OPNsense, which performs all inter-VLAN routing and firewalling.
+* **Access (Ports 2-6):** Host-facing ports are untagged members of exactly one VLAN, with the PVID set to match. Untagged frames are tagged with that VLAN ID on ingress and the tag is stripped on egress. Ingress filtering is enabled, so frames carrying a VLAN tag other than the port's own are dropped. This blocks VLAN-hopping attempts such as double tagging.
 
-To facilitate non-intrusive threat detection for the Suricata IDS node, a hardware-level Port Mirroring session was implemented within the switch fabric:
+## 3. Passive Monitoring via SPAN (Port Mirroring)
 
-* **Source Port:** Port 1 (The core OPNsense trunk carrying all inter-VLAN and WAN-bound traffic).
+A hardware port-mirroring session feeds traffic to the Suricata IDS node without putting it in the data path.
 
-* **Destination Port:** Port 8 (Connected directly to the Suricata network interface on the Raspberry Pi 4B).
-
-* **Operational Behavior:** The switch duplicates all ingress and egress frame streams traversing Port 1 and pipes them directly out of Port 8 in promiscuous mode. This allows full-stack packet inspection across all 4 segmented VLANs without injecting latency or modifying production traffic vectors.
+* **Source:** Port 1 (OPNsense trunk), both ingress and egress.
+* **Destination:** Port 8, connected to the Pi 4B's dedicated capture NIC.
+* **Behavior:** The switch copies every frame crossing the trunk, including all inter-VLAN and WAN-bound traffic, out of Port 8. The capture NIC is set to promiscuous mode and has no IP address, so the sensor is invisible on the network. Alerting and management traffic uses the Pi's second NIC on VLAN 30 (Port 5).
+* **Coverage Note:** Because the source is the firewall trunk, Suricata sees all routed traffic but not same-VLAN traffic switched locally (e.g., Lab 1 to Lab 2). To capture it, add Ports 3 and 4 as mirror sources.
+* **Capacity Note:** A full-duplex mirror of a gigabit port can exceed the destination port's bandwidth under heavy load, causing mirrored frames to be dropped. Production traffic is unaffected.
