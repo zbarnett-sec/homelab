@@ -1,4 +1,4 @@
-# Phase 4: Compute Node Provisioning and Vulnerable Workload Staging
+# Phase 4 (Phased Out): Compute Node Provisioning and Vulnerable Workload Staging
 
 > **Status: VLAN 20 (Labs) is being phased out.** The Juice Shop lab nodes on VLAN 20 are being retired. Juice Shop was initially moved to a laptop on [new lab VLAN / network] and is also in the process of being phased out. The Juice Shop sections below are kept as a reference for anyone reproducing the setup on low-resource hardware.
 
