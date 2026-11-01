@@ -40,17 +40,17 @@ Segmentation follows a default-deny model. Traffic is dropped unless an explicit
 ### Interface Rules
 
 ```
-| Interface    | Order | Action | Destination                              | Purpose                       |
-|--------------|-------|--------|------------------------------------------|-------------------------------|
+| Interface    | Order | Action | Destination        | Purpose                                             |
+|--------------|-------|--------|--------------------|-----------------------------------------------------|
 | VLAN 10 MGMT | 1     | Pass   | Designated hosts   | Administrative SSH to specific endpoints only       |
 | VLAN 10 MGMT | 2     | Pass   | Internet           | Updates and package access                          |
-|--------------|-------|--------|------------------------------------------|-------------------------------|
+|--------------|-------|--------|--------------------|-----------------------------------------------------|
 | VLAN 40 WiFi | 1     | Pass   | This firewall, DNS | Lets clients resolve names via the gateway          |
 | VLAN 40 WiFi | 2     | Block  | RFC 1918 alias     | Isolates wireless clients from all local subnets    |
 | VLAN 40 WiFi | 3     | Pass   | Any                | Internet-only access                                |
-|--------------|-------|--------|------------------------------------------|-------------------------------|
+|--------------|-------|--------|--------------------|-----------------------------------------------------|
 | VLAN 20 Labs | 1     | Pass   | Internet           | Updates and package access                          |
-|--------------|-------|--------|------------------------------------------|-------------------------------|
+|--------------|-------|--------|--------------------|-----------------------------------------------------|
 | VLAN 30 IDS  | 1     | Pass   | Internet           | Updates, package access, Discord webhook alerts     |
 ```
 
