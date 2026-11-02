@@ -242,14 +242,15 @@ def send_to_discord(alert_data):
     rev = alert_info.get("rev", "N/A")
 
     payload = {
+        "content": "🚨 **Suricata Alert** 🚨",
         "embeds": [{
-            "title": f"🚨 Suricata Alert: {alert_info.get('signature', 'Unknown Signature')}",
+            "title": alert_info.get('signature', 'Unknown Signature'),
             "color": 15158332, # Red
             "fields": [
                 {"name": "Severity", "value": str(alert_info.get("severity", "Unknown")), "inline": True},
                 {"name": "Category", "value": alert_info.get("category", "Unknown"), "inline": True},
                 {"name": "Signature ID", "value": f"{sig_id} (rev {rev})", "inline": True},
-                {"name": "Traffic Direction", "value": f"`{src_ip}` ➡️ `{dest_ip}`", "inline": False},
+                {"name": "Traffic Direction", "value": f"`{src_ip}` ➔ `{dest_ip}`", "inline": False},
                 {"name": "Protocol", "value": str(proto), "inline": True},
                 {"name": "Flow ID", "value": str(flow_id), "inline": True},
                 {"name": "Pull full flow later", "value": f"```grep '\"flow_id\":{flow_id}' {LOG_FILE}```", "inline": False}
@@ -367,7 +368,7 @@ To prevent unexpected logging spikes from filling the 256M memory allocations, a
 
 # Configuration
 set -a
-source /etc/suricata-to-discord.env
+source /etc/suricata-discord.env
 set +a
 WEBHOOK_URL="$DISCORD_URL_WEBHOOK"
 THRESHOLD=80
@@ -397,9 +398,9 @@ if [ -n "$USAGE" ]; then
         PAYLOAD=$(cat <<EOF
 {
   "embeds": [{
-    "title": "🧹 Log2Ram Auto-Clearing Action",
+    "title": "🧹 Log2Ram Auto-Truncation",
     "color": 3066993,
-    "description": "The RAM logging disk exceeded safety limits. An automated flush and truncation routine was executed.",
+    "description": "Log2Ram exceeded its memory usage. Log data was truncated to keep the system from running out of RAM.",
     "fields": [
       {"name": "Trigger Space", "value": "\`${USAGE}%\`", "inline": true},
       {"name": "Post-Flush Space", "value": "\`${NEW_USAGE}%\`", "inline": true}
