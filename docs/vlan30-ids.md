@@ -365,42 +365,56 @@ To prevent unexpected logging spikes from filling the 256M memory allocations, a
 
 ```
 #!/bin/bash
+set -euo pipefail
 
-# Configuration
-set -a
-source /etc/suricata-discord.env
-set +a
-WEBHOOK_URL="$DISCORD_URL_WEBHOOK"
-THRESHOLD=80
+# Ensure cron has access to system binaries like log2ram
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Extract current usage percentage of the Log2Ram mount point
-USAGE=$(df -h | grep "log2ram" | awk '{print $5}' | sed 's/%//')
+ENV_FILE="/etc/suricata-discord.env"
+THRESHOLD=50
 
-if [ -n "$USAGE" ]; then
-    if [ "$USAGE" -gt "$THRESHOLD" ]; then
+# 1. Safely load environment variables
+if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    source "$ENV_FILE"
+    set +a
+else
+    echo "Error: $ENV_FILE not found." >&2
+    exit 1
+fi
 
-        # 1. Sync RAM data down to physical persistent disk storage safely
-        log2ram write >/dev/null 2>&1
+# Verify the webhook URL loaded properly
+WEBHOOK_URL="${DISCORD_URL_WEBHOOK:-}"
+if [[ -z "$WEBHOOK_URL" ]]; then
+    echo "Error: DISCORD_URL_WEBHOOK is empty or unset in $ENV_FILE." >&2
+    exit 1
+fi
 
-        # 2. Zero-out the large eve.json log without breaking active file streams
-        if [ -f /var/log/suricata/eve.json ]; then
-            truncate -s 0 /var/log/suricata/eve.json
+# 2. Extract current usage percentage of /var/log cleanly
+USAGE=$(df --output=pcent /var/log 2>/dev/null | tail -n 1 | tr -dc '0-9')
+
+if [[ -n "$USAGE" && "$USAGE" -gt "$THRESHOLD" ]]; then
+
+    # Optional: Sync RAM logs to disk first (Note: next log2ram sync will overwrite with empty files)
+    log2ram write >/dev/null 2>&1 || true
+
+    # 3. Zero-out large Suricata logs without breaking active file handles
+    for log_file in /var/log/suricata/eve.json /var/log/suricata/fast.log; do
+        if [[ -f "$log_file" ]]; then
+            truncate -s 0 "$log_file"
         fi
+    done
 
-        if [ -f /var/log/suricata/fast.log ]; then
-            truncate -s 0 /var/log/suricata/fast.log
-        fi
+    # 4. Recalculate usage metric after truncation
+    NEW_USAGE=$(df --output=pcent /var/log 2>/dev/null | tail -n 1 | tr -dc '0-9')
 
-        # 3. Recalculate usage metric after the optimization routine
-        NEW_USAGE=$(df -h | grep "log2ram" | awk '{print $5}' | sed 's/%//')
-
-        # Send an automated recovery status embed down to your Discord channel
-        PAYLOAD=$(cat <<EOF
+    # 5. Send Discord webhook notification
+    PAYLOAD=$(cat <<EOF
 {
   "embeds": [{
     "title": "🧹 Log2Ram Auto-Truncation",
     "color": 3066993,
-    "description": "Log2Ram exceeded its memory usage. Log data was truncated to keep the system from running out of RAM.",
+    "description": "Log2Ram exceeded its memory threshold (${THRESHOLD}%). Suricata logs were truncated to prevent RAM exhaustion.",
     "fields": [
       {"name": "Trigger Space", "value": "\`${USAGE}%\`", "inline": true},
       {"name": "Post-Flush Space", "value": "\`${NEW_USAGE}%\`", "inline": true}
@@ -410,8 +424,8 @@ if [ -n "$USAGE" ]; then
 }
 EOF
 )
-        curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK_URL"
-    fi
+
+    curl -sS -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK_URL" >/dev/null
 fi
 ```
 
