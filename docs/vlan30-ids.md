@@ -370,7 +370,7 @@ set -euo pipefail
 # Ensure cron has access to system binaries like log2ram
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-ENV_FILE="/etc/suricata-discord.env"
+ENV_FILE="/etc/suricata-to-discord.env"
 THRESHOLD=50
 
 # 1. Safely load environment variables
